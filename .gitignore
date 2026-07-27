@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+
+# Alembic cache
+.mypy_cache/
+.pytest_cache/
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Python build
+dist/
+build/
+*.egg-info/
+
+# Coverage
+.coverage
+htmlcov/

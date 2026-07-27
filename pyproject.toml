@@ -1,0 +1,49 @@
+[project]
+name = "ecom-marketservice"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "ali mirzaee", email = "a.mirzaee@live.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "aiofiles>=25.1.0",
+    "alembic>=1.18.5",
+    "apscheduler>=3.11.3",
+    "beautifulsoup4>=4.15.0",
+    "fastapi>=0.140.2",
+    "httpx>=0.28.1",
+    "loguru>=0.7.3",
+    "lxml>=6.1.1",
+    "orjson>=3.11.9",
+    "pillow>=12.3.0",
+    "pydantic-settings>=2.14.2",
+    "pymysql>=1.2.0",
+    "pyodbc>=5.3.0",
+    "python-dotenv>=1.2.2",
+    "requests>=2.34.2",
+    "rich>=15.0.0",
+    "sqlalchemy>=2.0.51",
+    "tenacity>=9.1.4",
+    "uvicorn[standard]>=0.51.0",
+]
+
+[project.scripts]
+ecom-marketservice = "ecom_marketservice:main"
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
+    "flake8>=7.3.0",
+    "isort>=8.0.1",
+    "pytest>=9.1.1",
+]
+
+
+[tool.setuptools]
+py-modules = []
