@@ -1,36 +1,44 @@
-# Python
+```
+# Dependencies
+uv.lock
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Virtual Environment
+# Virtual environments
 .venv/
+venv/
+env/
 
-# IDE
-.vscode/
-.idea/
-
-# Logs
-logs/
-*.log
-
-# Environment
-.env
-
-# Alembic cache
-.mypy_cache/
-.pytest_cache/
-
-# Windows
-Thumbs.db
-Desktop.ini
-
-# Python build
+# Build artifacts
 dist/
 build/
 *.egg-info/
 
-# Coverage
+# Testing
+.pytest_cache/
 .coverage
+coverage/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
 htmlcov/
+```
