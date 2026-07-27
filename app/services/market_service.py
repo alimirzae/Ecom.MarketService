@@ -399,24 +399,13 @@ class MarketService:
         Raises:
             RuntimeError: If provider returns empty results.
         """
-        import asyncio
-        
         from app.providers.base_provider import BaseMarketProvider
         
         provider = ProviderRegistry.get(provider_name)
 
-        # Check if provider's method is async
-        provider_method = provider.get_latest_prices
-        import inspect
-        is_async = inspect.iscoroutinefunction(provider_method)
-        
+        # Call provider method (all providers are sync in this implementation)
         try:
-            if is_async:
-                # Run async method in sync context
-                results = asyncio.run(provider_method(codes))
-            else:
-                # Call sync method directly
-                results = provider_method(codes)
+            results = provider.get_latest_prices(codes)
         except Exception as e:
             logger.error(f"Provider {provider_name} failed: {e}")
             raise RuntimeError(f"Provider '{provider_name}' failed: {e}") from e

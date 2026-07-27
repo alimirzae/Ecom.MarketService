@@ -26,8 +26,8 @@ sys.path.insert(0, '.')
 from app.services.market_service import MarketService
 from app.repository.market_repository import MarketRepository
 from app.providers.provider_registry import ProviderRegistry
-from app.dto.price_dto import PriceDTO, PriceHistoryDTO
-from app.core.config import get_settings
+from app.dto.market_price_dto import MarketPriceDto
+from app.core.config import settings
 
 
 async def test_market_service_integration():
@@ -40,23 +40,21 @@ async def test_market_service_integration():
     print()
     
     # Get configuration
-    settings = get_settings()
-    print(f"Database: {settings.database_url}")
-    print(f"Default Provider: {settings.default_provider}")
+    print(f"Database: {settings.MYSQL_DATABASE}")
+    print(f"Default Provider: navasan")
     print()
     
     # Step 1: Create dependencies using dependency injection
     print("Step 1: Initializing dependencies...")
     try:
-        repository = MarketRepository()
+        from app.database.database import SessionLocal
+        db_session = SessionLocal()
+        repository = MarketRepository(db=db_session)
         provider_registry = ProviderRegistry()
-        
-        # Auto-discover and register providers
-        provider_registry.discover_providers()
         
         print(f"  ✓ Repository initialized")
         print(f"  ✓ Provider registry initialized")
-        print(f"  ✓ Available providers: {provider_registry.get_available_providers()}")
+        print(f"  ✓ Available providers: {provider_registry.all()}")
         print()
         
     except Exception as e:
@@ -66,10 +64,7 @@ async def test_market_service_integration():
     # Step 2: Create MarketService with dependency injection
     print("Step 2: Creating MarketService...")
     try:
-        service = MarketService(
-            price_repository=repository,
-            provider_registry=provider_registry
-        )
+        service = MarketService(repository=repository)
         print(f"  ✓ MarketService created successfully")
         print()
         
@@ -97,26 +92,26 @@ async def test_market_service_integration():
     
     try:
         refresh_start = datetime.now()
-        response = await service.force_refresh(item_codes=test_items)
+        response = service.force_refresh(codes=test_items)
         refresh_end = datetime.now()
         refresh_duration = (refresh_end - refresh_start).total_seconds()
         
         print(f"  ✓ ForceRefresh completed in {refresh_duration:.2f} seconds")
-        print(f"  ✓ Total prices retrieved: {response.total_count}")
+        print(f"  ✓ Total prices retrieved: {len(response)}")
         print()
         
         # Step 5: Print returned DTOs
         print("Step 5: Retrieved Price DTOs:")
         print("-" * 80)
         
-        if response.prices:
-            for price_dto in response.prices:
+        if response:
+            for price_dto in response:
                 if price_dto.price is not None:
-                    print(f"  • {price_dto.item_code:6s} | {price_dto.price:>12.4f} {price_dto.currency:3s} | "
-                          f"Source: {price_dto.source_provider:8s} | "
-                          f"Updated: {price_dto.updated_at.strftime('%Y-%m-%d %H:%M:%S') if price_dto.updated_at else 'N/A'}")
+                    print(f"  • {price_dto.code:6s} | {price_dto.price:>12.4f} {price_dto.currency:3s} | "
+                          f"Source: {price_dto.provider:8s} | "
+                          f"Retrieved: {price_dto.retrieved_at.strftime('%Y-%m-%d %H:%M:%S') if price_dto.retrieved_at else 'N/A'}")
                 else:
-                    print(f"  • {price_dto.item_code:6s} | {'NO DATA':>12s} | Source: {price_dto.source_provider}")
+                    print(f"  • {price_dto.code:6s} | {'NO DATA':>12s} | Source: {price_dto.provider}")
         else:
             print("  No prices retrieved")
         
@@ -126,20 +121,20 @@ async def test_market_service_integration():
         # Step 6: Read data back from Repository
         print("Step 6: Reading data back from Repository...")
         try:
-            cached_prices = await service.get_latest_prices(
-                item_codes=test_items,
-                force_refresh=False  # Should use cache
+            cached_prices = service.get_latest_prices(
+                codes=test_items,
+                force=False  # Should use cache
             )
             
             print(f"  ✓ Cache read successful")
-            print(f"  ✓ Cached prices count: {cached_prices.total_count}")
+            print(f"  ✓ Cached prices count: {len(cached_prices)}")
             print()
             
             # Verify cache matches fresh data
-            if response.total_count == cached_prices.total_count:
+            if len(response) == len(cached_prices):
                 print("  ✓ Cache consistency verified")
             else:
-                print(f"  ⚠ Cache count mismatch: fresh={response.total_count}, cache={cached_prices.total_count}")
+                print(f"  ⚠ Cache count mismatch: fresh={len(response)}, cache={len(cached_prices)}")
             print()
             
         except Exception as e:
@@ -149,18 +144,18 @@ async def test_market_service_integration():
         # Step 7: Test price history retrieval
         print("Step 7: Testing price history retrieval...")
         try:
-            history_response = await service.get_price_history(
-                item_codes=test_items[:2],  # Get history for first 2 items
-                days=1  # Last 1 day
+            history_response = service.get_price_history(
+                codes=test_items[:2],  # Get history for first 2 items
+                limit=10
             )
             
             print(f"  ✓ History retrieval successful")
-            print(f"  ✓ Historical records: {history_response.total_count}")
+            print(f"  ✓ Historical records: {len(history_response)}")
             
-            if history_response.history:
+            if history_response:
                 print(f"  • Sample history entry:")
-                sample = history_response.history[0]
-                print(f"      {sample.item_code}: {sample.price} {sample.currency} @ {sample.timestamp}")
+                sample = history_response[0]
+                print(f"      {sample.code}: {sample.price} {sample.currency} @ {sample.retrieved_at}")
             print()
             
         except Exception as e:
@@ -171,16 +166,16 @@ async def test_market_service_integration():
         print("Step 8: Verifying database records...")
         try:
             # Check latest prices table
-            db_latest = await repository.get_all_latest()
+            db_latest = repository.get_all_latest()
             print(f"  ✓ Latest prices in database: {len(db_latest)} records")
             
             # Check history table
-            db_history = await repository.get_history(limit=10)
+            db_history = repository.get_history(limit=10)
             print(f"  ✓ Price history in database: {len(db_history)} records")
             
             # Verify specific items exist
             for item_code in test_items:
-                item_latest = await repository.get_latest_by_code(item_code)
+                item_latest = repository.get_latest_by_code(item_code)
                 if item_latest:
                     print(f"  ✓ {item_code}: Found in database (Price: {item_latest.price})")
                 else:
@@ -195,14 +190,14 @@ async def test_market_service_integration():
         # Step 9: Test NeedRefresh logic
         print("Step 9: Testing NeedRefresh logic...")
         try:
-            needs_refresh = await service.need_refresh(item_codes=test_items)
+            needs_refresh = service.refresh_if_expired(codes=test_items, expiration_minutes=5)
             print(f"  ✓ NeedRefresh check completed")
-            print(f"  • Refresh needed: {needs_refresh}")
+            print(f"  • Refresh needed: {len(needs_refresh) < len(response)}")
             
-            if not needs_refresh:
-                print(f"  ✓ Cache is still valid (within TTL)")
+            if len(needs_refresh) == len(response):
+                print(f"  ✓ Cache was expired, data refreshed")
             else:
-                print(f"  ⚠ Cache expired or missing")
+                print(f"  ⚠ Cache status unclear")
             print()
             
         except Exception as e:
@@ -216,9 +211,9 @@ async def test_market_service_integration():
         
         success_criteria = [
             ("ForceRefresh executed", True),
-            ("Prices downloaded from Navasan", response.total_count > 0),
+            ("Prices downloaded from Navasan", len(response) > 0),
             ("Data stored in MySQL", len(db_latest) > 0),
-            ("Data retrieved from cache", cached_prices.total_count > 0),
+            ("Data retrieved from cache", len(cached_prices) > 0),
             ("History accessible", True),  # Even if empty, endpoint worked
             ("Database verification passed", True),
             ("NeedRefresh logic working", True),
@@ -254,7 +249,7 @@ async def test_market_service_integration():
     finally:
         # Cleanup
         try:
-            await repository.close()
+            repository.close()
             print()
             print("Database connection closed.")
         except:
@@ -270,19 +265,17 @@ async def test_error_scenarios():
     print("=" * 80)
     print()
     
-    repository = MarketRepository()
+    from app.database.database import SessionLocal
+    db_session = SessionLocal()
+    repository = MarketRepository(db=db_session)
     provider_registry = ProviderRegistry()
-    provider_registry.discover_providers()
     
-    service = MarketService(
-        price_repository=repository,
-        provider_registry=provider_registry
-    )
+    service = MarketService(repository=repository)
     
     # Test 1: Invalid provider
     print("Test 1: Invalid provider selection...")
     try:
-        await service.force_refresh(item_codes=["USD"], provider_name="INVALID_PROVIDER")
+        service.force_refresh(codes=["USD"], provider_name="INVALID_PROVIDER")
         print("  ✗ Should have raised an exception")
     except ValueError as e:
         print(f"  ✓ Correctly raised ValueError: {e}")
@@ -293,8 +286,8 @@ async def test_error_scenarios():
     # Test 2: Empty item list
     print("Test 2: Empty item list...")
     try:
-        response = await service.force_refresh(item_codes=[])
-        print(f"  ✓ Handled empty list: {response.total_count} items")
+        response = service.force_refresh(codes=[])
+        print(f"  ✓ Handled empty list: {len(response)} items")
     except Exception as e:
         print(f"  ✗ Failed with empty list: {e}")
     print()
@@ -302,16 +295,16 @@ async def test_error_scenarios():
     # Test 3: Non-existent item code
     print("Test 3: Non-existent item code...")
     try:
-        response = await service.force_refresh(item_codes=["NONEXISTENT123"])
-        print(f"  ✓ Handled non-existent code: {response.total_count} items")
+        response = service.force_refresh(codes=["NONEXISTENT123"])
+        print(f"  ✓ Handled non-existent code: {len(response)} items")
         # Should return item with null price
-        if response.prices and response.prices[0].price is None:
+        if response and response[0].price is None:
             print(f"  ✓ Correctly returned null price for unknown item")
     except Exception as e:
         print(f"  ✗ Failed with non-existent code: {e}")
     print()
     
-    await repository.close()
+    repository.close()
 
 
 async def main():
