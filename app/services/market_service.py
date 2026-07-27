@@ -59,7 +59,7 @@ class MarketService:
     # Public API
     # =========================================================
 
-    def get_latest_prices(
+    async def get_latest_prices(
         self,
         codes: list[str] | None = None,
         provider_name: str = "navasan",
@@ -112,7 +112,7 @@ class MarketService:
         codes_to_fetch = [item["item_code"] for item in items_to_fetch]
 
         try:
-            provider_results = self._refresh_from_provider(
+            provider_results = await self._refresh_from_provider(
                 codes_to_fetch, provider_name
             )
         except Exception as e:
@@ -212,7 +212,7 @@ class MarketService:
 
         return results
 
-    def force_refresh(
+    async def force_refresh(
         self,
         codes: list[str] | None = None,
         provider_name: str = "navasan",
@@ -231,14 +231,14 @@ class MarketService:
         Returns:
             List of MarketPriceDto with refreshed prices.
         """
-        return self.get_latest_prices(
+        return await self.get_latest_prices(
             codes=codes,
             provider_name=provider_name,
             force=True,
             category=category,
         )
 
-    def refresh_if_expired(
+    async def refresh_if_expired(
         self,
         codes: list[str] | None = None,
         provider_name: str = "navasan",
@@ -261,7 +261,7 @@ class MarketService:
             old_default = self._default_expiration_minutes
             self._default_expiration_minutes = expiration_minutes
             try:
-                return self.get_latest_prices(
+                return await self.get_latest_prices(
                     codes=codes,
                     provider_name=provider_name,
                     force=False,
@@ -270,7 +270,7 @@ class MarketService:
             finally:
                 self._default_expiration_minutes = old_default
 
-        return self.get_latest_prices(
+        return await self.get_latest_prices(
             codes=codes,
             provider_name=provider_name,
             force=False,
@@ -381,7 +381,7 @@ class MarketService:
 
         return ProviderRegistry.get(provider_name)
 
-    def _refresh_from_provider(
+    async def _refresh_from_provider(
         self,
         codes: list[str],
         provider_name: str,
@@ -399,13 +399,13 @@ class MarketService:
         Raises:
             RuntimeError: If provider returns empty results.
         """
-        from app.providers.base_provider import BaseMarketProvider
+        
         
         provider = ProviderRegistry.get(provider_name)
 
         # Call provider method (all providers are sync in this implementation)
         try:
-            results = provider.get_latest_prices(codes)
+            results = await provider.get_latest_prices(codes)
         except Exception as e:
             logger.error(f"Provider {provider_name} failed: {e}")
             raise RuntimeError(f"Provider '{provider_name}' failed: {e}") from e
@@ -523,8 +523,7 @@ class MarketService:
                         LatestPriceEntry(
                             item_id=item.id,
                             item_code=item.code,
-                            title=item.title,
-                            latest=None,
+                            title=item.title
                         )
                     )
                 else:
@@ -538,8 +537,7 @@ class MarketService:
                 LatestPriceEntry(
                     item_id=item.id,
                     item_code=item.code,
-                    title=item.title,
-                    latest=None,
+                    title=item.title 
                 )
                 for item in items
             ]
@@ -552,7 +550,6 @@ class MarketService:
                     item_id=item.id,
                     item_code=item.code,
                     title=item.title,
-                    latest=None,
                 )
                 for item in items
             ]
