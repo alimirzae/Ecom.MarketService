@@ -1,3 +1,20 @@
-Nothing should be ignored in this case, as the change list contains only a Python source file (`scripts/test_market_service.py`) which is a legitimate source code file that should be tracked in version control. There are no build artifacts, dependencies, temporary files, or other items that need to be ignored.
+```
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-Output: (empty)
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+```
