@@ -5,7 +5,7 @@ import re
 import httpx
 from bs4 import BeautifulSoup
 
-from app.models.market_price import MarketPrice
+from app.dto.provider_result import ProviderResult
 from app.utils.persian import normalize_number
 
 
@@ -20,7 +20,7 @@ class NavasanProvider(BaseMarketProvider):
     async def get_latest_prices(
         self,
         codes: list[str]
-    ) -> list[MarketPrice]:
+    ) -> list[ProviderResult]:
 
         url = f"{self.BASE_URL}?{'&'.join(codes)}"
 
@@ -81,7 +81,7 @@ class NavasanProvider(BaseMarketProvider):
 
         soup = BeautifulSoup(html, "html.parser")
 
-        prices: list[MarketPrice] = []
+        prices: list[ProviderResult] = []
 
         for row in soup.select("tbody tr[id]"):
 
@@ -127,13 +127,12 @@ class NavasanProvider(BaseMarketProvider):
             )
 
             prices.append(
-                MarketPrice(
+                ProviderResult(
                     code=code,
                     title=title,
-                    value=value,
+                    price=value,
                     change=change,
-                    update_time=update_time,
-                    provider=self.PROVIDER,
+                    provider_time=update_time,
                 )
             )
 
