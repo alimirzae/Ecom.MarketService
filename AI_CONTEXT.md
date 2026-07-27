@@ -291,9 +291,26 @@ OCR
 IMPORTANT
 
 ------------------------------------------------------------
+A Pull Request is NOT complete until all of the following pass:
+
+1. uv run pytest
+
+2. uv run uvicorn app.main:app
+
+3. GET /docs returns HTTP 200
+
+4. POST /api/v1/market/refresh works
+
+5. GET /api/v1/market/latest works
+
+6. Data is inserted into MySQL.
+
+A feature is considered complete only after these integration tests pass.
 
 Before changing architecture
 
 Update this file first.
 
 This file is the Single Source of Truth.
+
+
