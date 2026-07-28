@@ -124,8 +124,8 @@ async def get_latest_prices(
         if codes:
             code_list = [c.strip() for c in codes.split(",") if c.strip()]
 
-        # Call service
-        prices = service.get_latest_prices(codes=code_list)
+        # Call service (async)
+        prices = await service.get_latest_prices(codes=code_list)
 
         return LatestPriceResponse(
             success=True,
@@ -165,8 +165,8 @@ async def refresh_prices(
         HTTPException 500: Repository error
     """
     try:
-        # Call service with force=True
-        prices = service.force_refresh(
+        # Call service with force=True (async)
+        prices = await service.force_refresh(
             codes=request.codes if request.codes else None,
             provider_name=request.provider,
         )
@@ -222,7 +222,7 @@ async def get_price_history(
         if code:
             code_list = [c.strip() for c in code.split(",") if c.strip()]
 
-        # Call service
+        # Call service (get_price_history is sync)
         prices = service.get_price_history(
             codes=code_list,
             limit=limit,

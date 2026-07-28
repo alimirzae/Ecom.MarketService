@@ -434,4 +434,9 @@ class MarketRepository:
         if latest is None:
             return False
 
-        return latest.retrieved_at >= (utc_now() - timedelta(minutes=minutes))
+        retrieved_at = latest.retrieved_at
+        # Normalize timezone-naive datetimes to UTC
+        if retrieved_at.tzinfo is None:
+            retrieved_at = retrieved_at.replace(tzinfo=timezone.utc)
+
+        return retrieved_at >= (utc_now() - timedelta(minutes=minutes))
