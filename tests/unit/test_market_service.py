@@ -241,40 +241,49 @@ class TestMarketService:
     # Refresh From Provider Tests
     # =========================================================
 
-    def test_refresh_from_provider_success(self, service, sample_provider_result):
+    @pytest.mark.asyncio
+    async def test_refresh_from_provider_success(self, service, sample_provider_result):
         """Test _refresh_from_provider fetches data successfully."""
+        from unittest.mock import AsyncMock
+        
         mock_provider = Mock()
-        mock_provider.get_latest_prices = MagicMock()
+        mock_provider.get_latest_prices = AsyncMock()
         mock_provider.get_latest_prices.return_value = [sample_provider_result]
 
         with patch("app.services.market_service.ProviderRegistry.get", return_value=mock_provider):
-            result = service._refresh_from_provider(["usd"], "navasan")
+            result = await service._refresh_from_provider(["usd"], "navasan")
 
             assert len(result) == 1
             assert result[0].code == "usd"
             assert result[0].price == 58000
 
-    def test_refresh_from_provider_empty_result(self, service):
+    @pytest.mark.asyncio
+    async def test_refresh_from_provider_empty_result(self, service):
         """Test _refresh_from_provider raises when provider returns empty."""
+        from unittest.mock import AsyncMock
+        
         mock_provider = Mock()
-        mock_provider.get_latest_prices = MagicMock()
+        mock_provider.get_latest_prices = AsyncMock()
         mock_provider.get_latest_prices.return_value = []
 
         with patch("app.services.market_service.ProviderRegistry.get", return_value=mock_provider):
             with pytest.raises(RuntimeError) as exc_info:
-                service._refresh_from_provider(["usd"], "navasan")
+                await service._refresh_from_provider(["usd"], "navasan")
 
             assert "returned no data" in str(exc_info.value)
 
-    def test_refresh_from_provider_exception(self, service):
+    @pytest.mark.asyncio
+    async def test_refresh_from_provider_exception(self, service):
         """Test _refresh_from_provider handles provider exceptions."""
+        from unittest.mock import AsyncMock
+        
         mock_provider = Mock()
-        mock_provider.get_latest_prices = MagicMock()
+        mock_provider.get_latest_prices = AsyncMock()
         mock_provider.get_latest_prices.side_effect = Exception("Connection failed")
 
         with patch("app.services.market_service.ProviderRegistry.get", return_value=mock_provider):
             with pytest.raises(RuntimeError) as exc_info:
-                service._refresh_from_provider(["usd"], "navasan")
+                await service._refresh_from_provider(["usd"], "navasan")
 
             assert "failed" in str(exc_info.value).lower()
 
@@ -402,7 +411,8 @@ class TestMarketService:
     # Get Latest Prices Tests - Integration
     # =========================================================
 
-    def test_get_latest_prices_force_refresh(self, service, mock_repository, sample_provider_result, sample_market_item):
+    @pytest.mark.asyncio
+    async def test_get_latest_prices_force_refresh(self, service, mock_repository, sample_provider_result, sample_market_item):
         """Test get_latest_prices with force=True bypasses cache."""
         # Setup mocks
         mock_repository.get_item.return_value = sample_market_item
@@ -416,14 +426,15 @@ class TestMarketService:
                         with patch.object(service, "_build_response") as mock_build:
                             mock_build.return_value = [Mock(spec=MarketPriceDto)]
 
-                            result = service.get_latest_prices(codes=["usd"], force=True)
+                            result = await service.get_latest_prices(codes=["usd"], force=True)
 
                             mock_refresh.assert_called_once()
                             mock_store_latest.assert_called()
                             mock_store_history.assert_called()
                             mock_repository.commit.assert_called()
 
-    def test_get_latest_prices_uses_cache(self, service, mock_repository, sample_market_item):
+    @pytest.mark.asyncio
+    async def test_get_latest_prices_uses_cache(self, service, mock_repository, sample_market_item):
         """Test get_latest_prices uses cache when valid."""
         mock_repository.get_item.return_value = sample_market_item
 
@@ -434,25 +445,27 @@ class TestMarketService:
                 with patch.object(service, "_build_response_from_cache") as mock_build_cache:
                     mock_build_cache.return_value = [Mock(spec=MarketPriceDto)]
 
-                    result = service.get_latest_prices(codes=["usd"], force=False)
+                    result = await service.get_latest_prices(codes=["usd"], force=False)
 
                     mock_cache.assert_called()
                     mock_build_cache.assert_called()
                     # Should NOT call refresh or store
                     assert not hasattr(service, "_refresh_from_provider_called")
 
-    def test_get_latest_prices_no_items(self, service, mock_repository):
+    @pytest.mark.asyncio
+    async def test_get_latest_prices_no_items(self, service, mock_repository):
         """Test get_latest_prices returns empty when no items found."""
         mock_repository.get_item.return_value = None
 
         with patch.object(service, "_validate_provider") as mock_validate:
             mock_validate.return_value = Mock()
 
-            result = service.get_latest_prices(codes=["unknown"])
+            result = await service.get_latest_prices(codes=["unknown"])
 
             assert result == []
 
-    def test_get_latest_prices_transaction_rollback(self, service, mock_repository, sample_provider_result, sample_market_item):
+    @pytest.mark.asyncio
+    async def test_get_latest_prices_transaction_rollback(self, service, mock_repository, sample_provider_result, sample_market_item):
         """Test get_latest_prices rolls back on storage failure."""
         mock_repository.get_item.return_value = sample_market_item
 
@@ -462,7 +475,7 @@ class TestMarketService:
             with patch.object(service, "_refresh_from_provider", return_value=[sample_provider_result]):
                 with patch.object(service, "_store_latest_prices", side_effect=Exception("DB error")):
                     with pytest.raises(Exception):
-                        service.get_latest_prices(codes=["usd"], force=True)
+                        await service.get_latest_prices(codes=["usd"], force=True)
 
                     mock_repository.rollback.assert_called()
 
@@ -470,12 +483,13 @@ class TestMarketService:
     # Force Refresh Tests
     # =========================================================
 
-    def test_force_refresh_calls_get_latest_with_force(self, service):
+    @pytest.mark.asyncio
+    async def test_force_refresh_calls_get_latest_with_force(self, service):
         """Test force_refresh calls get_latest_prices with force=True."""
         with patch.object(service, "get_latest_prices") as mock_get:
             mock_get.return_value = []
 
-            service.force_refresh(codes=["usd"], provider_name="navasan")
+            await service.force_refresh(codes=["usd"], provider_name="navasan")
 
             mock_get.assert_called_once_with(
                 codes=["usd"],
@@ -488,12 +502,13 @@ class TestMarketService:
     # Refresh If Expired Tests
     # =========================================================
 
-    def test_refresh_if_expired_default_expiration(self, service):
+    @pytest.mark.asyncio
+    async def test_refresh_if_expired_default_expiration(self, service):
         """Test refresh_if_expired uses default expiration."""
         with patch.object(service, "get_latest_prices") as mock_get:
             mock_get.return_value = []
 
-            service.refresh_if_expired(codes=["usd"])
+            await service.refresh_if_expired(codes=["usd"])
 
             mock_get.assert_called_once_with(
                 codes=["usd"],
@@ -502,22 +517,24 @@ class TestMarketService:
                 category=None,
             )
 
-    def test_refresh_if_expired_custom_expiration(self, service):
+    @pytest.mark.asyncio
+    async def test_refresh_if_expired_custom_expiration(self, service):
         """Test refresh_if_expired uses custom expiration."""
         with patch.object(service, "get_latest_prices") as mock_get:
             mock_get.return_value = []
 
-            service.refresh_if_expired(codes=["usd"], expiration_minutes=10)
+            await service.refresh_if_expired(codes=["usd"], expiration_minutes=10)
 
             # Verify get_latest_prices was called (expiration is internal)
             mock_get.assert_called()
 
-    def test_refresh_if_expired_restores_default(self, service):
+    @pytest.mark.asyncio
+    async def test_refresh_if_expired_restores_default(self, service):
         """Test refresh_if_expired restores default expiration after custom."""
         original_default = service._default_expiration_minutes
 
         with patch.object(service, "get_latest_prices"):
-            service.refresh_if_expired(expiration_minutes=15)
+            await service.refresh_if_expired(expiration_minutes=15)
 
         assert service._default_expiration_minutes == original_default
 
