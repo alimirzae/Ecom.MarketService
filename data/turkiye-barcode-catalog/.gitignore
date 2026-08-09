@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+# Enriched BarcodeSpider product data may be subject to provider licensing.
+# Keep it out of public repos unless your subscription permits redistribution.
+data/output/raw/*.json
+data/output/images/*
+data/output/products.csv
+data/output/errors.csv
+data/output/checkpoint.json
+!data/output/raw/.gitkeep
+!data/output/images/.gitkeep
