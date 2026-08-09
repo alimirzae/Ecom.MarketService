@@ -1,0 +1,21 @@
+{
+  "source_file": "Turkiye_barcode_database.csv",
+  "source_rows": 19593,
+  "unique_barcodes": 19578,
+  "duplicate_rows_removed": 15,
+  "repaired_malformed_rows": 4,
+  "gtin_check_digit": {
+    "valid": 19310,
+    "invalid": 223,
+    "not_applicable_length": 60
+  },
+  "barcode_lengths": {
+    "8": 480,
+    "9": 5,
+    "10": 3,
+    "11": 52,
+    "12": 95,
+    "13": 18933,
+    "14": 25
+  }
+}
