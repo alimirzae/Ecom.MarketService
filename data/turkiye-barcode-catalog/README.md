@@ -1,6 +1,6 @@
 # Türkiye Barcode Catalog → iMonitor Market API
 
-This folder contains the Turkish product barcode source file, a deterministic normalization step, and a restartable enrichment client for **BarcodeSpider's official API**.
+This folder contains a deterministic normalization pipeline and a restartable enrichment client for **BarcodeSpider's official API**. A sample of the Turkish barcode input and a full dataset manifest are versioned here.
 
 ## Why API instead of website scraping?
 
@@ -19,18 +19,26 @@ The official documentation currently describes rate limits of 1 request / 5 seco
 
 The uploaded source contains 19,593 physical product rows. The normalizer produces 19,578 unique barcodes, repairs 4 malformed CSV rows, and removes 15 duplicate barcode rows. See `data/input/manifest.json` for exact validation statistics.
 
+The complete source and cleaned CSV were prepared as a local handoff artifact. The current ChatGPT GitHub connector cannot stream the ~816 KB uploaded conversation file directly into a repository blob, so only `sample.csv` is committed here. Place the full source at the path below before running the entire enrichment job.
+
 ## Files
 
 ```text
-data/source/Turkiye_barcode_database.csv        original uploaded file
-data/input/Turkiye_barcode_database.cleaned.csv normalized + deduplicated input
-data/input/manifest.json                         dataset statistics
+data/input/sample.csv                            committed smoke-test sample
+data/input/manifest.json                         full dataset statistics
 scripts/prepare_input.py                         robust CSV normalizer
 scripts/enrich_barcodespider.py                  official API enrichment client
 schema/product_record.schema.json                normalized output contract
-data/output/raw/                                 one API JSON response per barcode
-data/output/images/                              downloaded primary product images
+data/output/raw/                                 one API JSON response per barcode (runtime)
+data/output/images/                              downloaded primary product images (runtime)
 data/output/products.csv                         final flattened import file (runtime)
+```
+
+Expected full-data paths after copying the handoff artifact into this folder:
+
+```text
+data/source/Turkiye_barcode_database.csv
+data/input/Turkiye_barcode_database.cleaned.csv
 ```
 
 ## Setup
@@ -66,16 +74,16 @@ python scripts/prepare_input.py \
 
 ## Enrich products
 
-Smoke-test a small batch first:
+Smoke-test using the committed sample:
 
 ```bash
 python scripts/enrich_barcodespider.py \
-  data/input/Turkiye_barcode_database.cleaned.csv \
+  data/input/sample.csv \
   --output-dir data/output \
   --limit 20
 ```
 
-Then continue all remaining products:
+Then continue all remaining products after the full cleaned file is present:
 
 ```bash
 python scripts/enrich_barcodespider.py \
@@ -91,4 +99,4 @@ The process is restartable. Successful and not-found barcodes are skipped on lat
 
 ## Git and licensing note
 
-The enrichment output is ignored by `.gitignore` by default because BarcodeSpider's terms restrict making Product Data publicly available. If your BarcodeSpider subscription/license explicitly permits repository storage/redistribution, use a **private repository** and change the ignore rules deliberately. The code and the user-provided source/normalized input can be versioned independently.
+The enrichment output is ignored by `.gitignore` by default because BarcodeSpider's terms restrict making Product Data publicly available. If your BarcodeSpider subscription/license explicitly permits repository storage/redistribution, use a **private repository** and change the ignore rules deliberately. The code and user-provided source can be versioned independently.
